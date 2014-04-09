@@ -14,7 +14,7 @@ auto memo_foo = memoize(foo);
 int x = memo_foo(1, 2);
 
 // Or a lambda:
-auto memo_lambda = memoize((int a, int b) {
+auto memo_lambda = memoize([](int a, int b) {
   return a + b;
 });
 int y = memo_lambda(1, 2);
