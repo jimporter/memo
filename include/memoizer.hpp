@@ -8,13 +8,15 @@
 namespace memo {
 
 namespace detail {
+  // This gets the base function type from pretty much anything it can:
+  // C function types, member function types, monomorphic function objects.
   template<typename T, typename Enable = void>
   struct dismember;
 
   template<typename T>
   struct dismember<T, typename std::enable_if<
-                        std::is_class<T>::value
-                        >::type> : dismember<decltype(&T::operator())> {};
+    std::is_class<T>::value
+  >::type> : dismember<decltype(&T::operator())> {};
 
   template<typename T, typename Ret, typename ...Args>
   struct dismember<Ret (T::*)(Args...)> {
@@ -40,6 +42,17 @@ namespace detail {
   struct dismember<Ret (*)(Args...)> {
     using type = Ret(Args...);
   };
+
+  template<typename T>
+  struct remove_const_ref : std::remove_const<
+    typename std::remove_reference<T>::type
+  > {};
+
+  template<typename T, typename U>
+  struct is_same_base_type : std::is_same<
+    typename remove_const_ref<T>::type,
+    typename remove_const_ref<U>::type
+  > {};
 }
 
 template<typename T, typename Function>
@@ -52,21 +65,25 @@ public:
   using tuple_type = std::tuple<typename std::remove_reference<Args>::type...>;
   using return_type = Ret;
   using return_reference = const return_type &;
-  using map_type = std::map<tuple_type, return_type>;
+  using map_type = std::map<tuple_type, return_type, std::less<void>>;
 
   memoizer() {}
   memoizer(const T &f) : f_(f) {}
 
-  return_reference operator ()(const Args &...args) {
-    auto args_tuple = std::forward_as_tuple(args...);
-    auto i = memo_.find(args_tuple);
-    if(i != memo_.end()) {
-      return i->second;
-    }
-    else {
-      auto ins = memo_.emplace(args_tuple, call(args...)).first;
-      return ins->second;
-    }
+  template<typename ...CallArgs>
+  return_reference operator ()(CallArgs &&...args)
+  {
+    // This is a roundabout way of requiring that call is called with arguments
+    // of the same basic type as the function (i.e. it will make use of
+    // automatic conversions for similar types). This ensures that we always
+    // call the *same* function for polymorphic function objects.
+    return call<
+      typename std::conditional<
+        detail::is_same_base_type<CallArgs, Args>::value,
+        CallArgs &&,
+        typename detail::remove_const_ref<Args>::type &&
+      >::type...
+    >(std::forward<CallArgs>(args)...);
   }
 private:
   template<typename T2, typename ...Args2>
@@ -89,17 +106,34 @@ private:
     static const bool value = check_<T2, Args2...>(0);
   };
 
-  template<typename ...InnerArgs>
-  auto call(const InnerArgs &...args) -> typename std::enable_if<
-    can_pass_memoizer<T, InnerArgs...>::value,
+  template<typename ...CallArgs>
+  return_reference call(CallArgs &&...args) {
+    auto args_tuple = std::forward_as_tuple(std::forward<CallArgs>(args)...);
+    auto i = memo_.find(args_tuple);
+    if(i != memo_.end()) {
+      return i->second;
+    }
+    else {
+      auto result = call_function(args...);
+      auto ins = memo_.emplace(
+        std::move(args_tuple),
+        std::move(result)
+      ).first;
+      return ins->second;
+    }
+  }
+
+  template<typename ...CallArgs>
+  auto call_function(const CallArgs &...args) -> typename std::enable_if<
+    can_pass_memoizer<T, CallArgs...>::value,
     return_type
   >::type {
     return f_(*this, args...);
   }
 
-  template<typename ...InnerArgs>
-  auto call(const InnerArgs &...args) -> typename std::enable_if<
-    !can_pass_memoizer<T, InnerArgs...>::value,
+  template<typename ...CallArgs>
+  auto call_function(const CallArgs &...args) -> typename std::enable_if<
+    !can_pass_memoizer<T, CallArgs...>::value,
     return_type
   >::type {
     return f_(args...);
