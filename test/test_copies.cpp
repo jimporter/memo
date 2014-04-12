@@ -38,8 +38,8 @@ struct my_type {
   copy_tracker &tracker;
 };
 
-suite<> copies("copying", [](auto &_) {
-  _.test("copying", []() {
+suite<> copies("count copies", [](auto &_) {
+  _.test("temporary value", []() {
     auto memo = memoize([](const my_type &x) {
       return x.value;
     });
@@ -57,5 +57,35 @@ suite<> copies("copying", [](auto &_) {
     expect(t2.instances, equal_to(0u));
     expect(t2.copies, equal_to(0u));
     expect(t2.moves, equal_to(0u));
+
+    expect(t.instances, equal_to(1u));
+    expect(t.copies, equal_to(0u));
+    expect(t.moves, equal_to(1u));
+  });
+
+  _.test("named value", []() {
+    auto memo = memoize([](const my_type &x) {
+      return x.value;
+    });
+
+    copy_tracker t;
+    my_type val(0, t);
+    memo(val);
+
+    expect(t.instances, equal_to(2u));
+    expect(t.copies, equal_to(1u));
+    expect(t.moves, equal_to(0u));
+
+    copy_tracker t2;
+    my_type val2(0, t2);
+    memo(val2);
+
+    expect(t2.instances, equal_to(1u));
+    expect(t2.copies, equal_to(0u));
+    expect(t2.moves, equal_to(0u));
+
+    expect(t.instances, equal_to(2u));
+    expect(t.copies, equal_to(1u));
+    expect(t.moves, equal_to(0u));
   });
 });
