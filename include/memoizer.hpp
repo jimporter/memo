@@ -65,6 +65,9 @@ public:
   using tuple_type = std::tuple<typename std::remove_reference<Args>::type...>;
   using return_type = Ret;
   using return_reference = const return_type &;
+  // This lets us do lookups in our map without converting our value to
+  // key_type, which saves us a copy. There's a proposal to make this work for
+  // std::unordered_map too.
   using map_type = std::map<tuple_type, return_type, std::less<void>>;
 
   memoizer() {}
