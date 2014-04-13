@@ -11,35 +11,35 @@ namespace detail {
   // This gets the base function type from pretty much anything it can:
   // C function types, member function types, monomorphic function objects.
   template<typename T, typename Enable = void>
-  struct dismember;
+  struct function_signature;
 
   template<typename T>
-  struct dismember<T, typename std::enable_if<
+  struct function_signature<T, typename std::enable_if<
     std::is_class<T>::value
-  >::type> : dismember<decltype(&T::operator())> {};
+  >::type> : function_signature<decltype(&T::operator())> {};
 
   template<typename T, typename Ret, typename ...Args>
-  struct dismember<Ret (T::*)(Args...)> {
+  struct function_signature<Ret (T::*)(Args...)> {
     using type = Ret(Args...);
   };
 
   template<typename T, typename Ret, typename ...Args>
-  struct dismember<Ret (T::*)(Args...) const> {
+  struct function_signature<Ret (T::*)(Args...) const> {
     using type = Ret(Args...);
   };
 
   template<typename Ret, typename ...Args>
-  struct dismember<Ret(Args...)> {
+  struct function_signature<Ret(Args...)> {
     using type = Ret(Args...);
   };
 
   template<typename Ret, typename ...Args>
-  struct dismember<Ret (&)(Args...)> {
+  struct function_signature<Ret (&)(Args...)> {
     using type = Ret(Args...);
   };
 
   template<typename Ret, typename ...Args>
-  struct dismember<Ret (*)(Args...)> {
+  struct function_signature<Ret (*)(Args...)> {
     using type = Ret(Args...);
   };
 
@@ -144,13 +144,15 @@ private:
 };
 
 template<typename Function, typename T>
-auto memoize(T &&t) {
+inline auto memoize(T &&t) {
   return memoizer<T, Function>(std::forward<T>(t));
 }
 
 template<typename T>
-auto memoize(T &&t) {
-  return memoizer<T, typename detail::dismember<T>::type>(std::forward<T>(t));
+inline auto memoize(T &&t) {
+  return memoizer<T, typename detail::function_signature<T>::type>(
+    std::forward<T>(t)
+  );
 }
 
 } // namespace memo
