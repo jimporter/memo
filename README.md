@@ -35,7 +35,8 @@ auto fib = memoize<size_t(size_t)>([](auto &fib, size_t n) -> size_t {
 ## Requirements
 
 Currently, this code is tested in C++14 (clang 3.4). The tests themselves
-*require* C++14, but the library itself should be happy with C++11.
+*require* C++14 (see [mettle](http://jimporter.github.io/mettle/), but the
+library itself should be happy with C++11.
 
 ## License
 
