@@ -22,9 +22,11 @@ TESTS := $(patsubst %.cpp,%,$(wildcard test/*.cpp))
 $(TESTS): %: %.o
 	$(CXX) $(CXXFLAGS) $< $(LDFLAGS) -lmettle -o $@
 
+tests: $(TESTS)
+
 .PHONY: test
-test: test/test_all
-	test/test_all --verbose 2 --color
+test: tests
+	mettle --verbose 2 --color $(TESTS)
 
 .PHONY: clean
 clean:
