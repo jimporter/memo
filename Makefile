@@ -30,7 +30,7 @@ install:
 
 .PHONY: test
 test: tests
-	mettle --verbose 2 --color $(TESTS)
+	mettle --output=verbose --color $(TESTS)
 
 .PHONY: clean
 clean:
