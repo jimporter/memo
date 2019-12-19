@@ -8,6 +8,8 @@ functions.
 ## Example
 
 ```c++
+#include <memo.hpp>
+
 // Use a regular function:
 int foo(int a, int b) {
   return a + b;

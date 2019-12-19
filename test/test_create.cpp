@@ -1,5 +1,6 @@
 #include <mettle.hpp>
-#include "../include/memoizer.hpp"
+
+#include "memo.hpp"
 
 using namespace mettle;
 using namespace memo;

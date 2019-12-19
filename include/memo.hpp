@@ -1,5 +1,5 @@
-#ifndef INC_MEMO_MEMOIZER_HPP
-#define INC_MEMO_MEMOIZER_HPP
+#ifndef INC_MEMO_HPP
+#define INC_MEMO_HPP
 
 #include <functional>
 #include <map>
