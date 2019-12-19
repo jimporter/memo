@@ -141,7 +141,6 @@ install:
   - ninja install
   - popd
   - export CPATH=${HOME}/include PKG_CONFIG_PATH=${HOME}/lib/pkgconfig
-  - ls ${HOME}/include
 script:
   - >
     CXXFLAGS="${COMMONFLAGS} ${EXTRAFLAGS}"
