@@ -1,6 +1,7 @@
 # memo
 
 [![Travis build status][travis-image]][travis-link]
+[![Appveyor build status][appveyor-image]][appveyor-link]
 
 ``memo`` is a small C++17 library designed to allow for easy memoization of
 functions.
@@ -61,4 +62,6 @@ This library is licensed under the [BSD 3-Clause license](LICENSE).
 
 [travis-image]: https://travis-ci.org/jimporter/memo.svg?branch=master
 [travis-link]: https://travis-ci.org/jimporter/memo
+[appveyor-image]: https://ci.appveyor.com/api/projects/status/952r0yasxiuqeq08/branch/master?svg=true
+[appveyor-link]: https://ci.appveyor.com/project/jimporter/memo/branch/master
 [mettle]: https://jimporter.github.io/mettle/
