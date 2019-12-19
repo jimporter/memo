@@ -8,14 +8,39 @@
 namespace memo {
 
 namespace detail {
+
+  // This is identical to the C++20 type trait.
+  template<typename T>
+  struct remove_cvref : std::remove_cv<std::remove_reference_t<T>> {};
+
+  template<typename T>
+  using remove_cvref_t = typename remove_cvref<T>::type;
+
+  template<typename T>
+  struct drop_first_arg;
+
+  template<typename Ret, typename First, typename ...Args>
+  struct drop_first_arg<Ret(First, Args...)> {
+    using type = Ret(Args...);
+  };
+
+  struct anything {
+    template<typename T> operator T();
+    template<typename T> anything operator +(T &&);
+    template<typename T> anything operator -(T &&);
+    template<typename T> anything operator *(T &&);
+    template<typename T> anything operator /(T &&);
+  };
+
   // This gets the base function type from pretty much anything it can:
   // C function types, member function types, monomorphic function objects.
   template<typename T, typename Enable = void>
   struct function_signature;
 
   template<typename T>
-  struct function_signature<T, std::enable_if_t<std::is_class_v<T>>>
-    : function_signature<decltype(&T::operator())> {};
+  struct function_signature<T, std::enable_if_t<
+    std::is_class_v<remove_cvref_t<T>>
+  >> : function_signature<decltype(&remove_cvref_t<T>::operator())> {};
 
   template<typename T, typename Ret, typename ...Args>
   struct function_signature<Ret (T::*)(Args...)> {
@@ -45,12 +70,21 @@ namespace detail {
   template<typename T>
   using function_signature_t = typename function_signature<T>::type;
 
-  // This is identical to the C++20 type trait.
-  template<typename T>
-  struct remove_cvref : std::remove_cv<std::remove_reference_t<T>> {};
+  template<typename T, typename Result = anything, typename Enable = void>
+  struct recursive_function_signature;
 
-  template<typename T>
-  using remove_cvref_t = typename remove_cvref<T>::type;
+  template<typename T, typename Result>
+  struct recursive_function_signature<
+    T, Result, std::enable_if_t<std::is_class_v<remove_cvref_t<T>>>
+  > {
+    using type = typename drop_first_arg<function_signature_t<decltype(
+      &remove_cvref_t<T>::template operator()<Result(*)(...)>
+    )>>::type;
+  };
+
+  template<typename ...T>
+  using recursive_function_signature_t =
+    typename recursive_function_signature<T...>::type;
 
   template<typename T, typename U>
   struct is_same_underlying_type : std::is_same<
@@ -62,13 +96,13 @@ namespace detail {
     is_same_underlying_type<T, U>::value;
 }
 
-template<typename T, typename Function>
+template<typename Signature, typename Function, bool Recursive = false>
 class memoizer;
 
-template<typename T, typename Ret, typename ...Args>
-class memoizer<T, Ret(Args...)> {
+template<typename Ret, typename ...Args, typename Function, bool Recursive>
+class memoizer<Ret(Args...), Function, Recursive> {
 public:
-  using function_type = T;
+  using function_type = Function;
   using function_signature = Ret(Args...);
   using tuple_type = std::tuple<std::remove_reference_t<Args>...>;
   using return_type = Ret;
@@ -79,7 +113,7 @@ public:
   using map_type = std::map<tuple_type, return_type, std::less<void>>;
 
   memoizer() {}
-  memoizer(const T &f) : f_(f) {}
+  memoizer(const function_type &f) : f_(f) {}
 
   template<typename ...CallArgs>
   return_reference operator ()(CallArgs &&...args) {
@@ -98,61 +132,59 @@ public:
     >...>(std::forward<CallArgs>(args)...);
   }
 private:
-  template<typename ...>
-  static auto check_can_pass_(...) -> std::false_type;
-
-  template<typename ...CallArgs>
-  static auto check_can_pass_(int) -> decltype(
-    std::declval<T>()(std::declval<memoizer&>(), std::declval<CallArgs>()...),
-    std::true_type()
-  );
-
-  template<typename ...CallArgs>
-  struct can_pass_memoizer : decltype(check_can_pass_<CallArgs...>(0)) {};
-
   template<typename ...CallArgs>
   return_reference call(CallArgs ...args) {
     auto args_tuple = std::forward_as_tuple(std::forward<CallArgs>(args)...);
     auto i = memo_.find(args_tuple);
     if(i != memo_.end()) {
       return i->second;
-    }
-    else {
-      auto result = call_function(args...);
-      auto ins = memo_.emplace(
-        std::move(args_tuple),
-        std::move(result)
-      ).first;
-      return ins->second;
+    } else {
+      if constexpr(Recursive) {
+        return store_call([this](auto &&...args) {
+          return f_(*this, std::forward<decltype(args)>(args)...);
+        }, std::move(args_tuple))->second;
+      } else {
+        return store_call(f_, std::move(args_tuple))->second;
+      }
     }
   }
 
-  template<typename ...CallArgs>
-  auto call_function(const CallArgs &...args) -> std::enable_if_t<
-    can_pass_memoizer<CallArgs...>::value, return_type
-  > {
-    return f_(*this, args...);
-  }
-
-  template<typename ...CallArgs>
-  auto call_function(const CallArgs &...args) -> std::enable_if_t<
-    !can_pass_memoizer<CallArgs...>::value, return_type
-  > {
-    return f_(args...);
+  template<typename F, typename ArgsTuple>
+  auto store_call(F &&f, ArgsTuple &&args) {
+    auto result = std::apply(std::forward<F>(f), args);
+    return memo_.emplace(
+      std::forward<ArgsTuple>(args),
+      std::move(result)
+    ).first;
   }
 
   map_type memo_;
-  T f_;
+  function_type f_;
 };
 
-template<typename Function, typename T>
+template<typename Signature, typename T>
 inline auto memoize(T &&t) {
-  return memoizer<T, Function>(std::forward<T>(t));
+  return memoizer<Signature, T>(std::forward<T>(t));
 }
 
 template<typename T>
 inline auto memoize(T &&t) {
-  return memoizer<T, detail::function_signature_t<T>>(
+  return memoizer<detail::function_signature_t<T>, T>(std::forward<T>(t));
+}
+
+template<typename Signature, typename T>
+inline auto recursive_memoize(T &&t) {
+  if constexpr(std::is_function_v<Signature>) {
+    return memoizer<Signature, T, true>(std::forward<T>(t));
+  } else {
+    using Sig = detail::recursive_function_signature_t<T, Signature>;
+    return memoizer<Sig, T, true>(std::forward<T>(t));
+  }
+}
+
+template<typename T>
+inline auto recursive_memoize(T &&t) {
+  return memoizer<detail::recursive_function_signature_t<T>, T, true>(
     std::forward<T>(t)
   );
 }

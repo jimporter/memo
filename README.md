@@ -21,8 +21,15 @@ auto memo_lambda = memoize([](int a, int b) {
 });
 int y = memo_lambda(1, 2);
 
+// Or a polymorphic function object:
+struct bar {
+  int operator ()(int a, int b);
+  float operator ()(float a, float b);
+};
+auto memo_bar = memoize<int(int, int)>(bar{});
+
 // Or a recursive function:
-auto fib = memoize<size_t(size_t)>([](auto &fib, size_t n) -> size_t {
+auto fib = recursive_memoize([](auto &fib, size_t n) -> size_t {
   switch(n) {
   case 0:
     return 0;
@@ -32,6 +39,13 @@ auto fib = memoize<size_t(size_t)>([](auto &fib, size_t n) -> size_t {
     return fib(n-1) + fib(n-2);
   }
 });
+
+// You can also specify the return type of your recursive function if the above
+// fails:
+auto fib2 = recursive_memoize<size_t>(...);
+
+// Or even the full signature:
+auto fib3 = recursive_memoize<size_t(size_t)>(...);
 ```
 
 ## Requirements

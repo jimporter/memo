@@ -54,8 +54,8 @@ suite<> mem("create memoizer", [](auto &_) {
     expect(memo(dx, dy), equal_to(9));
   });
 
-  _.test("recursive function", []() {
-    auto fib = memoize<size_t(size_t)>([](auto &fib, size_t n) -> size_t {
+  subsuite<>(_, "recursive function", [](auto &_) {
+    auto lambda = [](auto &fib, size_t n) -> size_t {
       switch(n) {
       case 0:
         return 0;
@@ -64,10 +64,28 @@ suite<> mem("create memoizer", [](auto &_) {
       default:
         return fib(n-1) + fib(n-2);
       }
+    };
+
+    _.test("implicit signature", [lambda]() {
+      auto fib = recursive_memoize(lambda);
+      expect(fib(1), equal_to(1u));
+      expect(fib(5), equal_to(5u));
+      expect(fib(10), equal_to(55u));
     });
-    expect(fib(1), equal_to(1u));
-    expect(fib(5), equal_to(5u));
-    expect(fib(10), equal_to(55u));
+
+    _.test("result-type signature", [lambda]() {
+      auto fib = recursive_memoize<size_t>(lambda);
+      expect(fib(1), equal_to(1u));
+      expect(fib(5), equal_to(5u));
+      expect(fib(10), equal_to(55u));
+    });
+
+    _.test("explicit signature", [lambda]() {
+      auto fib = recursive_memoize<size_t(size_t)>(lambda);
+      expect(fib(1), equal_to(1u));
+      expect(fib(5), equal_to(5u));
+      expect(fib(10), equal_to(55u));
+    });
   });
 
   _.test("number of calls", []() {
