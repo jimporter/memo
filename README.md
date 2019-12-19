@@ -1,5 +1,7 @@
 # memo
 
+[![Travis build status][travis-image]][travis-link]
+
 ``memo`` is a small C++ library designed to allow for easy memoization of
 functions.
 
@@ -41,4 +43,6 @@ tests, you'll need a C++17 compiler and [mettle][mettle].
 
 This library is licensed under the [BSD 3-Clause license](LICENSE).
 
+[travis-image]: https://travis-ci.org/jimporter/memo.svg?branch=master
+[travis-link]: https://travis-ci.org/jimporter/memo
 [mettle]: https://jimporter.github.io/mettle/
