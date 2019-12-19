@@ -14,9 +14,8 @@ namespace detail {
   struct function_signature;
 
   template<typename T>
-  struct function_signature<T, typename std::enable_if<
-    std::is_class<T>::value
-  >::type> : function_signature<decltype(&T::operator())> {};
+  struct function_signature<T, std::enable_if_t<std::is_class_v<T>>>
+    : function_signature<decltype(&T::operator())> {};
 
   template<typename T, typename Ret, typename ...Args>
   struct function_signature<Ret (T::*)(Args...)> {
@@ -44,15 +43,23 @@ namespace detail {
   };
 
   template<typename T>
-  struct remove_const_ref : std::remove_const<
-    typename std::remove_reference<T>::type
+  using function_signature_t = typename function_signature<T>::type;
+
+  // This is identical to the C++20 type trait.
+  template<typename T>
+  struct remove_cvref : std::remove_cv<std::remove_reference_t<T>> {};
+
+  template<typename T>
+  using remove_cvref_t = typename remove_cvref<T>::type;
+
+  template<typename T, typename U>
+  struct is_same_underlying_type : std::is_same<
+    remove_cvref_t<T>, remove_cvref_t<U>
   > {};
 
   template<typename T, typename U>
-  struct is_same_base_type : std::is_same<
-    typename remove_const_ref<T>::type,
-    typename remove_const_ref<U>::type
-  > {};
+  inline constexpr bool is_same_underlying_type_v =
+    is_same_underlying_type<T, U>::value;
 }
 
 template<typename T, typename Function>
@@ -61,8 +68,9 @@ class memoizer;
 template<typename T, typename Ret, typename ...Args>
 class memoizer<T, Ret(Args...)> {
 public:
-  using function_type = Ret(Args...);
-  using tuple_type = std::tuple<typename std::remove_reference<Args>::type...>;
+  using function_type = T;
+  using function_signature = Ret(Args...);
+  using tuple_type = std::tuple<std::remove_reference_t<Args>...>;
   using return_type = Ret;
   using return_reference = const return_type &;
   // This lets us do lookups in our map without converting our value to
@@ -74,43 +82,36 @@ public:
   memoizer(const T &f) : f_(f) {}
 
   template<typename ...CallArgs>
-  return_reference operator ()(CallArgs &&...args)
-  {
+  return_reference operator ()(CallArgs &&...args) {
     // This is a roundabout way of requiring that call is called with arguments
     // of the same basic type as the function (i.e. it will make use of
     // automatic conversions for similar types). This ensures that we always
     // call the *same* function for polymorphic function objects.
-    return call<
-      typename std::conditional<
-        detail::is_same_base_type<CallArgs, Args>::value,
-        CallArgs &&,
-        typename detail::remove_const_ref<Args>::type &&
-      >::type...
-    >(std::forward<CallArgs>(args)...);
+    return call<std::conditional_t<
+      detail::is_same_underlying_type_v<CallArgs, Args>,
+      CallArgs &&,
+#if defined(_MSC_VER) && !defined(__clang__)
+      detail::remove_cvref_t<Args>
+#else
+      detail::remove_cvref_t<Args> &&
+#endif
+    >...>(std::forward<CallArgs>(args)...);
   }
 private:
-  template<typename T2, typename ...Args2>
-  class can_pass_memoizer {
-    template<typename U> struct always_bool { typedef bool type; };
-
-    template<typename T3, typename ...Args3>
-    static constexpr typename always_bool<
-      decltype(std::declval<T3>()(
-        std::declval<memoizer&>(), std::declval<Args3>()...
-      ))
-    >::type check_(int) {
-      return true;
-    }
-    template<typename T3, typename ...Args3>
-    static constexpr bool check_(...) {
-      return false;
-    }
-  public:
-    static const bool value = check_<T2, Args2...>(0);
-  };
+  template<typename ...>
+  static auto check_can_pass_(...) -> std::false_type;
 
   template<typename ...CallArgs>
-  return_reference call(CallArgs &&...args) {
+  static auto check_can_pass_(int) -> decltype(
+    std::declval<T>()(std::declval<memoizer&>(), std::declval<CallArgs>()...),
+    std::true_type()
+  );
+
+  template<typename ...CallArgs>
+  struct can_pass_memoizer : decltype(check_can_pass_<CallArgs...>(0)) {};
+
+  template<typename ...CallArgs>
+  return_reference call(CallArgs ...args) {
     auto args_tuple = std::forward_as_tuple(std::forward<CallArgs>(args)...);
     auto i = memo_.find(args_tuple);
     if(i != memo_.end()) {
@@ -127,18 +128,16 @@ private:
   }
 
   template<typename ...CallArgs>
-  auto call_function(const CallArgs &...args) -> typename std::enable_if<
-    can_pass_memoizer<T, CallArgs...>::value,
-    return_type
-  >::type {
+  auto call_function(const CallArgs &...args) -> std::enable_if_t<
+    can_pass_memoizer<CallArgs...>::value, return_type
+  > {
     return f_(*this, args...);
   }
 
   template<typename ...CallArgs>
-  auto call_function(const CallArgs &...args) -> typename std::enable_if<
-    !can_pass_memoizer<T, CallArgs...>::value,
-    return_type
-  >::type {
+  auto call_function(const CallArgs &...args) -> std::enable_if_t<
+    !can_pass_memoizer<CallArgs...>::value, return_type
+  > {
     return f_(args...);
   }
 
@@ -153,7 +152,7 @@ inline auto memoize(T &&t) {
 
 template<typename T>
 inline auto memoize(T &&t) {
-  return memoizer<T, typename detail::function_signature<T>::type>(
+  return memoizer<T, detail::function_signature_t<T>>(
     std::forward<T>(t)
   );
 }

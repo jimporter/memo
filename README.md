@@ -2,7 +2,7 @@
 
 [![Travis build status][travis-image]][travis-link]
 
-``memo`` is a small C++ library designed to allow for easy memoization of
+``memo`` is a small C++17 library designed to allow for easy memoization of
 functions.
 
 ## Example
@@ -36,8 +36,8 @@ auto fib = memoize<size_t(size_t)>([](auto &fib, size_t n) -> size_t {
 
 ## Requirements
 
-This library requires a C++11-compliant compiler. Additionally, to run the
-tests, you'll need a C++17 compiler and [mettle][mettle].
+This library requires a C++17-compliant compiler. Additionally, to run the
+tests, you'll need [mettle][mettle].
 
 ## License
 
