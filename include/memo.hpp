@@ -141,9 +141,16 @@ namespace memo {
         return i->second;
       } else {
         if constexpr(Recursive) {
-          return store_call([this](auto &&...args) {
-            return f_(*this, std::forward<decltype(args)>(args)...);
-          }, std::move(args_tuple))->second;
+          return store_call(
+#ifdef __cpp_lib_bind_front
+            std::bind_front(f_, *this),
+#else
+            [this](auto &&...args) {
+              return f_(*this, std::forward<decltype(args)>(args)...);
+            },
+#endif
+            std::move(args_tuple)
+          )->second;
         } else {
           return store_call(f_, std::move(args_tuple))->second;
         }
