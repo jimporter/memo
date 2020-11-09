@@ -132,7 +132,7 @@ jobs:
     - name: Run tests (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        set CXXFLAGS="/WX ${{ matrix.flags }}"
+        ${env:CXXFLAGS} = "/WX ${{ matrix.flags }}"
         9k build --backend=ninja
         cd build
         ninja test
