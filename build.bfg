@@ -1,18 +1,18 @@
 # -*- python -*-
 
-bfg9000_required_version('>=0.5.0')
+bfg9000_required_version('>=0.6.0')
 project('memo', version='0.1-dev')
 
 global_options([opts.std(argv.std)], lang='c++')
 
-includes = header_directory('include', include='*.hpp')
+includes = header_directory('include', include='**/*.hpp')
 
 install(includes)
 
-test_files = find_paths('test', '*.cpp')
+test_files = find_paths('test/**/*.cpp')
 
 try:
-    libmettle = package('mettle', headers=['mettle.hpp'])
+    libmettle = package('mettle')
     mettle = test_driver(['mettle', '--output=verbose'])
 
     for src in test_files:
@@ -25,5 +25,5 @@ try:
 except PackageResolutionError:
     warning('mettle not found; tests disabled')
 
-pkg_config()
+pkg_config(auto_fill=True)
 extra_dist(files=['README.md', 'LICENSE'])
