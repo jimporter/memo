@@ -15,10 +15,14 @@ jobs:
       matrix:
         include:
           # GCC builds
-          - {os: ubuntu-latest, compiler: gcc,   version:  '7'}
-          - {os: ubuntu-latest, compiler: gcc,   version:  '8'}
-          - {os: ubuntu-latest, compiler: gcc,   version:  '9'}
-          - {os: ubuntu-latest, compiler: gcc,   version: '10'}
+          - {os: ubuntu-latest, compiler: gcc,   version:  '7',
+             flags: '-Wsuggest-override'}
+          - {os: ubuntu-latest, compiler: gcc,   version:  '8',
+             flags: '-Wsuggest-override'}
+          - {os: ubuntu-latest, compiler: gcc,   version:  '9',
+             flags: '-Wsuggest-override'}
+          - {os: ubuntu-latest, compiler: gcc,   version: '10',
+             flags: '-Wsuggest-override'}
 
           # Clang builds
           - {os: ubuntu-latest, compiler: clang, version:  '6.0'}
@@ -36,7 +40,7 @@ jobs:
 
           # C++20 builds
           - {os: ubuntu-latest, compiler: gcc,   version: '10',
-             flags: '--std=c++2a'}
+             flags: '--std=c++2a -Wsuggest-override'}
           - {os: ubuntu-latest, compiler: clang, version:  '10',
              flags: '--std=c++2a'}
       fail-fast: false
