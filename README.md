@@ -59,6 +59,6 @@ tests, you'll need [mettle][mettle].
 
 This library is licensed under the [BSD 3-Clause license](LICENSE).
 
-[ci-image]: https://github.com/jimporter/memo/workflows/build/badge.svg
-[ci-link]: https://github.com/jimporter/memo/actions?query=branch%3Amaster+workflow%3Abuild
+[ci-image]: https://github.com/jimporter/memo/actions/workflows/build.yml/badge.svg
+[ci-link]: https://github.com/jimporter/memo/actions/workflows/build.yml?query=branch%3Amaster
 [mettle]: https://jimporter.github.io/mettle/
