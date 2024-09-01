@@ -58,7 +58,7 @@ jobs:
              common-options: '--std=c++23', flags: '-Wsuggest-override',
              boost-version: '1.85.0', extra-desc: 'c++20'}
           - {os: ubuntu-latest, compiler: clang, version: '18',
-             common-options: '--std=c++20', boost-version: '1.85.0',
+             common-options: '--std=c++23', boost-version: '1.85.0',
              extra-desc: 'c++23'}
       fail-fast: false
 
