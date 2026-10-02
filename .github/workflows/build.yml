@@ -78,12 +78,14 @@ jobs:
         if: startsWith(matrix.os, 'windows-')
         run: |
           choco install ninja pkgconfiglite
+          echo "CXXFLAGS=/W3 /WX /wd4244 ${{ matrix.flags }}" >> ${env:GITHUB_ENV}
       - name: Install macOS dependencies
         if: startsWith(matrix.os, 'macos-')
         run: |
           brew install ninja pkg-config
           echo "CPATH=/opt/homebrew/include" >> ${GITHUB_ENV}
           echo "LIBRARY_PATH=/opt/homebrew/lib" >> ${GITHUB_ENV}
+          echo "CXXFLAGS=${COMMONFLAGS} ${{ matrix.flags }}" >> ${GITHUB_ENV}
       - name: Install gcc
         if: startsWith(matrix.os, 'ubuntu-') && matrix.compiler == 'gcc'
         run: |
@@ -91,6 +93,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install g++-${{ matrix.version }}
           echo "CXX=g++-${{ matrix.version }}" >> ${GITHUB_ENV}
+          echo "CXXFLAGS=${COMMONFLAGS} ${{ matrix.flags }}" >> ${GITHUB_ENV}
       - name: Install clang
         if: startsWith(matrix.os, 'ubuntu-') && matrix.compiler == 'clang' &&
           matrix.llvm-apt
@@ -101,6 +104,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install clang-${{ matrix.version }}
           echo "CXX=clang++-${{ matrix.version }}" >> ${GITHUB_ENV}
+          echo "CXXFLAGS=${COMMONFLAGS} ${{ matrix.flags }}" >> ${GITHUB_ENV}
       - name: Initialize MSVC ${{ matrix.version }}
         if: startsWith(matrix.os, 'windows-')
         uses: ilammy/msvc-dev-cmd@v1
